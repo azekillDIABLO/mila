@@ -2,6 +2,10 @@
 
 mila = {}
 
+--define the version of the engine
+
+local version = 0.3
+
 --register some basic things. (here the move. needs some improvements)
 local mila_step = function(self,dtime)
    local mobe = self.object
@@ -71,8 +75,14 @@ end
 --register the egg function
 
 
+local egg = 1 --say if egg or no (1 to activate)
 
 function mila:add_egg(name,params)
+
+	if egg == 1 then
+		params.wield_image = params.wield_image.. "^mila_egg_spawn.png"
+	end
+
   minetest.register_craftitem(name, {
   	description = params.description,
   	inventory_image = params.inventory_image,
@@ -88,3 +98,8 @@ function mila:add_egg(name,params)
   	end,
 	})
 end
+
+--say that every little thing is gonna be allright
+
+print("M.I.L.A" ..version..": Everything is OK and running. Have Fun!")
+print("M.I.L.A" ..version..": Remenber to report any bug on forum!")

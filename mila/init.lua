@@ -57,6 +57,10 @@ function mila:add_entity(name,def)
    minetest.register_entity(name, {
       mesh = def.mesh,
       textures = def.textures,
+      collision_box = def.collision_box,
+      visual_size = def.visual_size,
+      visual = def.visual or "mesh",
+      rotate = math.rad(def.rotate or 0),
       hp_max = def.hp_max,
       speed = def.speed,
       view_range = def.view_range,
@@ -68,11 +72,11 @@ end
 
 
 
-function mila:add_egg(name,description,image)
+function mila:add_egg(name,params)
   minetest.register_craftitem(name, {
-  	description = description,
-  	inventory_image = image,
-  	wield_image = image,
+  	description = params.description,
+  	inventory_image = params.inventory_image,
+  	wield_image = params.wield_image,
   	wield_scale = {x = 1, y = 1, z = 0.5},
   	on_place = function(itemstack, placer, pointed_thing)
   		if pointed_thing.type == "node" then

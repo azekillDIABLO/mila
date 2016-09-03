@@ -6,7 +6,81 @@ mila = {}
 
 local version = 0.3
 
---register some basic things. (here the move. needs some improvements)
+--##register some basic things##
+
+--set_animation
+
+set_animation = function(self, type)
+
+	if not self.animation then
+		return
+	end
+
+	self.animation.current = self.animation.current or ""
+
+	if type == "stand"
+	and self.animation.current ~= "stand" then
+
+		if self.animation.stand_start
+		and self.animation.stand_end
+		and self.animation.speed_normal then
+
+			self.object:set_animation({
+				x = self.animation.stand_start,
+				y = self.animation.stand_end},
+				self.animation.speed_normal, 0)
+
+			self.animation.current = "stand"
+		end
+
+	elseif type == "walk"
+	and self.animation.current ~= "walk" then
+
+		if self.animation.walk_start
+		and self.animation.walk_end
+		and self.animation.speed_normal then
+
+			self.object:set_animation({
+				x = self.animation.walk_start,
+				y = self.animation.walk_end},
+				self.animation.speed_normal, 0)
+
+			self.animation.current = "walk"
+		end
+
+	elseif type == "run"
+	and self.animation.current ~= "run" then
+
+		if self.animation.run_start
+		and self.animation.run_end
+		and self.animation.speed_run then
+
+			self.object:set_animation({
+				x = self.animation.run_start,
+				y = self.animation.run_end},
+				self.animation.speed_run, 0)
+
+			self.animation.current = "run"
+		end
+
+	elseif type == "punch"
+	and self.animation.current ~= "punch" then
+
+		if self.animation.punch_start
+		and self.animation.punch_end
+		and self.animation.speed_normal then
+
+			self.object:set_animation({
+				x = self.animation.punch_start,
+				y = self.animation.punch_end},
+				self.animation.speed_normal, 0)
+
+			self.animation.current = "punch"
+		end
+	end
+end
+
+--mouvements of entities
 local mila_step = function(self,dtime)
    local mobe = self.object
    local mobposition = mobe:getpos()
@@ -46,29 +120,32 @@ local mila_step = function(self,dtime)
       local displacement = vector.distance(playerposition,mobposition)
       self.object:setvelocity({
          x=self.speed*direction.x/displacement,
-         y=self.speed*direction.y/displacement,
+         y=self.speed*direction.y/displacement-5,
          z=self.speed*direction.z/displacement
          })
 	self.object:set_animation({x=0,y=10},10,0)
    else
-      self.object:setvelocity({x=0,y=0,z=0})
+      self.object:setvelocity({x=0,y=-5,z=0})
    end
 end
 
 --register the first function (add).
 
 function mila:add_entity(name,def)
-   minetest.register_entity(name, {
-      mesh = def.mesh,
-      textures = def.textures,
-      collision_box = def.collision_box,
-      visual_size = def.visual_size,
-      visual = def.visual or "mesh",
-      rotate = math.rad(def.rotate or 0),
-      hp_max = def.hp_max,
-      speed = def.speed,
-      view_range = def.view_range,
-      on_step = mila_step
+	minetest.register_entity(name, {
+		physical = true,
+        collide_with_objects = true, 
+		mesh = def.mesh,
+		textures = def.textures,
+		collision_box = def.collision_box,
+		visual_size = def.visual_size,
+		visual = def.visual or "mesh",
+		rotate = math.rad(def.rotate or 0),
+		hp_max = def.hp_max,
+		speed = def.speed,
+		view_range = def.view_range,
+		on_step = mila_step,
+		animation = {def.animation}
    })
 end
 
@@ -87,7 +164,7 @@ function mila:add_egg(name,params)
   	description = params.description,
   	inventory_image = params.inventory_image,
   	wield_image = params.wield_image,
-  	wield_scale = {x = 1, y = 1, z = 0.5},
+  	wield_scale = {x = 1, y = 1, z = 1.5},
   	on_place = function(itemstack, placer, pointed_thing)
   		if pointed_thing.type == "node" then
   			pointed_thing.under.y = pointed_thing.under.y + 1
@@ -102,4 +179,4 @@ end
 --say that every little thing is gonna be allright
 
 print("M.I.L.A" ..version..": Everything is OK and running. Have Fun!")
-print("M.I.L.A" ..version..": Remenber to report any bug on forum!")
+print("M.I.L.A" ..version..": Remember to report any bug on forum!")

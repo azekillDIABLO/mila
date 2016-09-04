@@ -80,53 +80,52 @@ set_animation = function(self, type)
 	end
 end
 
---mouvements of entities
+--checks and actions for every entity
 local mila_step = function(self,dtime)
-   local mobe = self.object
-   local mobposition = mobe:getpos()
+	local mobe = self.object
+	local mobposition = mobe:getpos()
 
-   if mobe:get_hp() < 1 then
-   	mobe:remove()
+	if mobe:get_hp() < 1 then
+		mobe:remove()
 	return
-   end
+	end
 
-   --find entities
-   local entitylist = minetest.get_objects_inside_radius(mobposition, self.view_range or 5)
-   if not entitylist then return end -- no players in range, stand still.
-   
-   -- list players and mobs
-   local moblist = {}
-   local playerlist = {}
-   for _,entity in pairs(entitylist) do
-      if entity:is_player() then
-         playerlist[#playerlist+1] = entity
-      elseif entity.mobengine and entity.mobengine == "milamob" then
-         -- need to add check that it is not its own self
-         moblist[#moblist+1] = entity
-      end
-   end
+	--find entities
+	local entitylist = minetest.get_objects_inside_radius(mobposition, self.view_range)
+	if not entitylist then return end -- no players in range, stand still.
+	
+	-- list players and mobs
+	local moblist = {}
+	local playerlist = {}
+	for _,entity in pairs(entitylist) do
+		if entity:is_player() then
+			playerlist[#playerlist+1] = entity
+		elseif entity.mobengine and entity.mobengine == "milamob" then
+			-- need to add check that it is not its own self
+			moblist[#moblist+1] = entity
+		end
+	end
 
-   -- if player found, choose one
-   local playerobj = nil
-   if #playerlist > 0 then
-      playerobj = playerlist[math.random(1,#playerlist)]
-   end
-   
-   
-   -- move towards player if exists
-   if playerobj then
-      local playerposition = playerobj:getpos()
-      local direction = vector.direction(mobposition,playerposition)
-      local displacement = vector.distance(playerposition,mobposition)
-      self.object:setvelocity({
-         x=self.speed*direction.x/displacement,
-         y=self.speed*direction.y/displacement-5,
-         z=self.speed*direction.z/displacement
-         })
-	self.object:set_animation({x=0,y=10},10,0)
-   else
-      self.object:setvelocity({x=0,y=-5,z=0})
-   end
+	-- if player found, choose one
+	local playerobj = nil
+	if #playerlist > 0 then
+		playerobj = playerlist[math.random(1,#playerlist)]
+	end
+	
+	
+	-- move towards player if exists
+	if playerobj then
+		local playerposition = playerobj:getpos()
+		local direction = vector.direction(mobposition,playerposition)
+		local displacement = vector.distance(playerposition,mobposition)
+		self.object:setvelocity({
+			x=self.speed*direction.x/displacement,
+			y=self.speed*direction.y/displacement+self.fall_speed, -- fall_speed must be negative
+			z=self.speed*direction.z/displacement
+			})
+	else
+		self.object:setvelocity({x=0,y=self.fall_speed,z=0})
+	end
 end
 
 --register the first function (add).
@@ -134,19 +133,20 @@ end
 function mila:add_entity(name,def)
 	minetest.register_entity(name, {
 		physical = true,
-        collide_with_objects = true, 
+		collide_with_objects = true, 
 		mesh = def.mesh,
 		textures = def.textures,
-		collision_box = def.collision_box,
+		collisionbox = def.collisionbox,
 		visual_size = def.visual_size,
 		visual = def.visual or "mesh",
 		rotate = math.rad(def.rotate or 0),
-		hp_max = def.hp_max,
-		speed = def.speed,
-		view_range = def.view_range,
+		hp_max = def.hp_max or 10,
+		speed = def.speed or 1,
+		view_range = def.view_range or 5,
+		fall_speed = def.fall_speed or -2,
 		on_step = mila_step,
 		animation = {def.animation}
-   })
+	})
 end
 
 --register the egg function
@@ -160,19 +160,19 @@ function mila:add_egg(name,params)
 		params.wield_image = params.wield_image.. "^mila_egg_spawn.png"
 	end
 
-  minetest.register_craftitem(name, {
-  	description = params.description,
-  	inventory_image = params.inventory_image,
-  	wield_image = params.wield_image,
-  	wield_scale = {x = 1, y = 1, z = 1.5},
-  	on_place = function(itemstack, placer, pointed_thing)
-  		if pointed_thing.type == "node" then
-  			pointed_thing.under.y = pointed_thing.under.y + 1
-  			local luao = minetest.add_entity(pointed_thing.under, name)
-			local luae = luao:get_luaentity()
-			luao:set_hp(luae.hp_max)
-  		end
-  	end,
+	minetest.register_craftitem(name, {
+		description = params.description,
+		inventory_image = params.inventory_image,
+		wield_image = params.wield_image,
+		wield_scale = {x = 1, y = 1, z = 1.5},
+		on_place = function(itemstack, placer, pointed_thing)
+			if pointed_thing.type == "node" then
+				pointed_thing.under.y = pointed_thing.under.y + 1
+				local luao = minetest.add_entity(pointed_thing.under, name)
+				local luae = luao:get_luaentity()
+				luao:set_hp(luae.hp_max)
+			end
+		end,
 	})
 end
 

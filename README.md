@@ -1,7 +1,7 @@
 # M.I.L.A by azekill_DIABLO 
 ##**M**onster **I**ntelligence : **L**ightweight **A**pi
 
-<screenshot>
+![](https://raw.githubusercontent.com/azekillDIABLO/mila/master/screenshot.png)
 _____________________________________________________________________
 **WHAT:**
 *"A mod which aims to run faster than other API, to give a nice experience 

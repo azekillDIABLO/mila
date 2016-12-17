@@ -11,7 +11,7 @@ It got really playable, even if it's still quite unstable... for now! azekill_DI
 
 This is an API, so check the other files (api_help.lua, settings.lua) to start modding with it!
 The modpage also links to "compoments" that really adds mobs. (most of the informations
-here are subjects to bbig and irregular changes. I am trying to keep this file up-to-date)
+here are subjects to big and irregular changes. I am trying to keep this file up-to-date)
 
 **COMING SOON :**
 	- natural spawns (W.I.P)

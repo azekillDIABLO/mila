@@ -2,7 +2,7 @@
 mila = {}
 
 --define the version of the engine
-mila.version = "0.7.1"
+mila.version = "0.8"
 
 --set little things, for deletion
 clean = false
@@ -62,24 +62,46 @@ end
 local function move_random(self)
 	local random = math.random(1, 20)
 	local vel = self.object:getvelocity()
-	if random < 5 then -- set a new course
-		self.object:setvelocity({
-			x=math.random(-self.speed, self.speed),
-			y=-self.gravity,
-			z=math.random(-self.speed, self.speed)
-		})
-	elseif random < 10 then -- slow down
-		self.object:setvelocity({
-			x = vel.x*0.8,
-			y = vel.y,
-			z = vel.z*0.8,
-		})
-	else
-		self.object:setvelocity({
-			x = vel.x,
-			y = -self.gravity,
-			z = vel.z,
-		})
+	if not self.gravity == 0 then
+		if random < 5 then -- set a new course
+			self.object:setvelocity({
+				x=math.random(-self.speed, self.speed),
+				y=-self.gravity,
+				z=math.random(-self.speed, self.speed)
+			})
+		elseif random < 10 then -- slow down
+			self.object:setvelocity({
+				x = vel.x*0.8,
+				y = vel.y,
+				z = vel.z*0.8,
+			})
+		else
+			self.object:setvelocity({
+				x = vel.x,
+				y = -self.gravity,
+				z = vel.z,
+			})
+		end
+	elseif self.gravity == 0 then
+		if random < 5 then -- set a new course
+			self.object:setvelocity({
+				x=math.random(-self.speed, self.speed),
+				y=math.random(-self.speed, self.speed),
+				z=math.random(-self.speed, self.speed)
+			})
+		elseif random < 10 then -- slow down
+			self.object:setvelocity({
+				x = vel.x*0.8,
+				y = vel.y*0.8,
+				z = vel.z*0.8,
+			})
+		else
+			self.object:setvelocity({
+				x = vel.x,
+				y = vel.y,
+				z = vel.z,
+			})
+		end
 	end
 end
 
@@ -171,6 +193,16 @@ local mila_first = function(self,dtime)
 end
 
 --bleed and other on punch
+
+if bleed_type == 1 then
+	minetest.debug("M.I.L.A " ..version..": Realistic Blood Actived!")
+elseif bleed_type == 2 then
+	minetest.debug("M.I.L.A " ..version..": Blood Trail Actived!")
+elseif bleed_type == 3 then
+	minetest.debug("M.I.L.A " ..version..": Massive Butchery Actived!")
+elseif bleed_type == 4 then
+	minetest.debug("M.I.L.A " ..version..": Blood Splashes Disabled!")
+end
 
 local mila_bleed = function(self)
 	local mobe = self.object
@@ -318,10 +350,10 @@ if mila.spawning == true then
 	minetest.debug("M.I.L.A " ..mila.version..": Spawning is actived!")
 		function mila:add_spawn(mobname)
 		minetest.register_abm({ 
-			nodenames = {"default:dirt_with_grass"},
-			neighbors = {"air"}, 
-			interval = 140,
-			chance = 250, 
+			nodenames = params.nodenames or {"default:dirt_with_grass"},
+			neighbors = params.neighbors or {"air"},
+			interval = params.interval or 40,
+			chance = params.chance or 140, 
 			action = function(pos, node, active_object_count, active_object_count_wider)
 				minetest.add_entity(pos, mobname)
 			end,

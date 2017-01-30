@@ -5,7 +5,7 @@ This is a .lua file, so comment is needed.
 ]]
 
 --say that we are loading
-print("M.I.L.A " ..mila.version..": Settings file found, loading...")
+minetest.debug("M.I.L.A " ..mila.version..": Settings file found, loading...")
 
 -- 1 for realistic blood, 2 for blood trail, 3 for the massive butchery and 4 to disable:
 mila.bleed_type = 1

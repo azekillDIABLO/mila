@@ -129,7 +129,7 @@ local mila_act = function(self,dtime)
 
 			local playerlist = nil
 			local moblist = nil
-			--moblist, playerlist  = find_entities(self.object, self.view_range)
+			moblist, playerlist  = find_entities(self.object, self.view_range)
 
 			-- if players found, choose one
 			if playerlist and #playerlist > 0 then

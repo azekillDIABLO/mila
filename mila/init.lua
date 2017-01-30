@@ -314,16 +314,19 @@ function mila:add_egg(name,params)
 end
 
 --##SPAWNING FUNCTIONS
-function mila:add_spawn(mobname)
-	minetest.register_abm({ 
-		nodenames = {"default:dirt_with_grass"},
-		neighbors = {"air"}, 
-		interval = 5,
-		chance = 1500, 
-		action = function(pos, node, active_object_count, active_object_count_wider)
-			minetest.add_entity(pos, mobname)
-		end,
-	})
+if mila.spawning == true then
+	minetest.debug("M.I.L.A " ..mila.version..": Spawning is actived!")
+		function mila:add_spawn(mobname)
+		minetest.register_abm({ 
+			nodenames = {"default:dirt_with_grass"},
+			neighbors = {"air"}, 
+			interval = 140,
+			chance = 250, 
+			action = function(pos, node, active_object_count, active_object_count_wider)
+				minetest.add_entity(pos, mobname)
+			end,
+		})
+	end
 end
 
 --set the /mila_clean command

@@ -1,30 +1,101 @@
 --define a global mila table
-
-mila = {} --not local for other files
+mila = {}
 
 --define the version of the engine
-
-version = 0.7 --not local for other files
+mila.version = "0.7.1"
 
 --set little things, for deletion
-
 clean = false
 --WIP ::::  removelua = 0
 
 --define modpath
-
 milapath = minetest.get_modpath("mila") --not local for other files
 
 --open the settings file (you can change things in it!!!)
-
 dofile(milapath .."/settings.lua")
 
 --open the misc files, for registering items, node, abms
-
 dofile(milapath .."/misc.lua")
+
+-- =======================
+-- General functions
+
+local function move_to_player(mob, player)
+	local mobposition = mob:getpos()
+	local mobe = mob:get_luaentity()
+	local playerposition = player:getpos()
+
+	local direction = vector.direction(mobposition,playerposition)
+	local distance = vector.distance(mobposition,playerposition)
+	if distance > 1 then
+		mob:setvelocity({
+			x=mobe.speed*direction.x,
+			y=mobe.speed*direction.y - mobe.gravity, -- fall_speed must be negative
+			z=mobe.speed*direction.z
+		})
+	end
+end
+
+local function find_entities(mob, range)
+		--find entities
+		local pos = mob:getpos()
+		local entitylist = minetest.get_objects_inside_radius(pos, range)
+		if not entitylist then return end
+
+		--list players and mobs
+		local moblist = {}
+		local playerlist = {}
+
+		for _,entity in pairs(entitylist) do
+			if entity:is_player() then
+				playerlist[#playerlist+1] = entity
+			elseif entity.mobengine and entity.mobengine == "milamob" then
+				if entity ~= mob then
+					moblist[#moblist+1] = entity
+				end
+			end
+		end
+
+		return moblist, playerlist
+end
+
+local function move_random(self)
+	local random = math.random(1, 20)
+	local vel = self.object:getvelocity()
+	if random < 5 then -- set a new course
+		self.object:setvelocity({
+			x=math.random(-self.speed, self.speed),
+			y=-self.gravity,
+			z=math.random(-self.speed, self.speed)
+		})
+	elseif random < 10 then -- slow down
+		self.object:setvelocity({
+			x = vel.x*0.8,
+			y = vel.y,
+			z = vel.z*0.8,
+		})
+	else
+		self.object:setvelocity({
+			x = vel.x,
+			y = -self.gravity,
+			z = vel.z,
+		})
+	end
+end
+
+-- ==========================
+-- Activity
 
 --checks and actions for every entity
 local mila_act = function(self,dtime)
+	self.stepcounter = self.stepcounter + dtime
+	if self.stepcounter > mila.globalcounter then
+		self.stepcounter = 0
+	else
+		return
+	end
+
+
 	local mobe = self.object
 	local mobposition = mobe:getpos()
 	local mobname = self.name
@@ -35,108 +106,61 @@ local mila_act = function(self,dtime)
 	mobe:set_nametag_attributes({
 		color = {a=205, r=95, g=L_hp, b=5}, --goes from a greenish color to dark red
 		text = "[" .. mobname .."] ".. hp .."/".. self.hp_max,
-      })
+	})
 	
 	--delete with /mila_clean command
 	if clean == true then
-		removelua = removelua + 1
+		local removelua = (removelua or 0) + 1
 		mobe:set_hp(0)
 		mobe:remove()
 		--count the removed, then kill
 	end
+
 --##HOSTILE CODE
 	if self.status == "hostile" then
-	--find entities
-	local entitylist = minetest.get_objects_inside_radius(mobposition, self.view_range)
-	if not entitylist then return end -- no players in range, stand still.
-	--list players and mobs
-	local moblist = {}
-	local playerlist = {}
-		for _,entity in pairs(entitylist) do
-			if entity:is_player() then
-				playerlist[#playerlist+1] = entity
-			elseif entity.mobengine and entity.mobengine == "milamob" then
-				-- need to add check that it is not its own self
-				moblist[#moblist+1] = entity
+
+		-- check for a target
+		if self.target and vector.distance(mobposition, self.target:getpos()) > self.range then
+			-- previously acquired target now out of range
+			self.target = nil
+		end
+
+		if not self.target then
+
+			local playerlist = nil
+			local moblist = nil
+			--moblist, playerlist  = find_entities(self.object, self.view_range)
+
+			-- if players found, choose one
+			if playerlist and #playerlist > 0 then
+				self.target = playerlist[math.random(1,#playerlist)]	
 			end
 		end
-		-- if player found, choose one
-	local playerobj = nil
-		if #playerlist > 0 then
-			playerobj = playerlist[math.random(1,#playerlist)]	
+
+		if self.target and vector.distance(mobposition, self.target:getpos()) < self.range then 
+			minetest.debug("M.I.L.A " ..mila.version..": A mob is attacking!")
+
+			local hptarget = self.target:get_hp()
+
+			self.target:set_hp(hptarget - self.damage)
+			self.object:setvelocity({x=0,y=-self.gravity,z=0})
+		elseif self.target then
+			move_to_player(self.object, self.target)
+		else
+			move_random(self)
 		end
-	-- move towards player if exists, if not, move around
-	local random = math.random(1, 20)
-	if playerobj then
-		local playerposition = playerobj:getpos()
-		local direction = vector.direction(mobposition,playerposition)
-		self.object:setvelocity({
-			x=self.speed*direction.x,
-			y=self.speed*direction.y-self.gravity, -- fall_speed must be negative
-			z=self.speed*direction.z
-			})
-	elseif random == 1 then
-		mobe:setvelocity({x=math.random(-self.speed, self.speed),y=-self.gravity,z=math.random(-self.speed, self.speed)})
-	end
-	--attacking
-	local targetlist = minetest.get_objects_inside_radius(mobposition, self.range)
-	--list players and mobs
-	local target_moblist = {}
-	local target_playerlist = {}
-		for _,entity in pairs(targetlist) do
-			if entity:is_player() then
-				target_playerlist[#target_playerlist+1] = entity
-			elseif entity.mobengine and entity.mobengine == "milamob" then
-				-- need to add check that it is not its own self
-				target_moblist[#target_moblist+1] = entity
-			end
-		end
-		-- if player found, choose one
-	local target_playerobj = nil
-		if #target_playerlist > 0 then
-			target_playerobj = target_playerlist[math.random(1,#target_playerlist)]	
-			if target_playerobj then 
-				local hptarget = target_playerobj:get_hp()
-				minetest.after(1, function()
-				target_playerobj:set_hp(hptarget - self.damage)
-				print("M.I.L.A " ..version..": A mob is attacking!")
-				self.object:setvelocity({x=0,y=-self.gravity,z=0})
-				end)
-			end
-		else return end
-	--end this
-	end
+
 --##PASSIVE CODE
-	if self.status == "passive" then
-	local random = math.random(1, 40)
-	if random == 1 then
-		self.object:setvelocity({x=math.random(-self.speed, self.speed),y=-self.gravity,z=math.random(-self.speed, self.speed)})
-		--[[minetest.sound_play(self.sounds,{
-				pos = mobposition,
-				gain = 3.0, -- default
-				max_hear_distance = 52, -- default, uses an euclidean metric
-				loop = not true, -- only sounds connected to objects can be looped
-				print(self.sounds)
-			})]]
-		end
-	end
+	elseif self.status == "passive" then
+		move_random(self)
+
 --##RE CODE (Rotating Entity)
-if self.status == "re" then
-	local look_at = mobe:getyaw()
-	self.object:setyaw(look_at+0.05)				 -- it's does like the item code :D
-	self.object:setvelocity({x=0,y=-self.gravity,z=0}) 	 -- it remains very useful for doing tests, powerups...
+	elseif self.status == "re" then
+		local look_at = mobe:getyaw()
+		self.object:setyaw(look_at+0.05)				 -- it's does like the item code :D
+		self.object:setvelocity({x=0,y=-self.gravity,z=0}) 	 -- it remains very useful for doing tests, powerups...
 	end
 	
---##SPAWNING FUNCTIONS
-	minetest.register_abm({ 
-		nodenames = {"default:dirt_with_grass"},
-		neighbors = {"air"}, 
-		interval = 1,
-		chance = 1, 
-		action = function(pos, node, active_object_count, active_object_count_wider)
-			minetest.add_entity(pos, mobe)
-		end,
-	})
 end
 
 --first things we need to do with the entity
@@ -145,17 +169,8 @@ local mila_first = function(self,dtime)
 	local mobe = self.object
 	--nope
 end
---bleed and other on punch
 
-if bleed_type == 1 then
-	print("M.I.L.A " ..version..": Realistic Blood Actived!")
-elseif bleed_type == 2 then
-	print("M.I.L.A " ..version..": Blood Trail Actived!")
-elseif bleed_type == 3 then
-	print("M.I.L.A " ..version..": Massive Butchery Actived!")
-elseif bleed_type == 4 then
-	print("M.I.L.A " ..version..": Blood Splashes Disabled!")
-end
+--bleed and other on punch
 
 local mila_bleed = function(self)
 	local mobe = self.object
@@ -180,9 +195,12 @@ local mila_bleed = function(self)
 		--drop items
 		minetest.add_item({x = mobposition.x + math.random(-0.5, 0.5), y = mobposition.y + math.random(-0.5, 0.5), z = mobposition.z + math.random(-0.5, 0.5)}, self.drops)
 		mobe:remove()
-		print("M.I.L.A "..version..": Deleted an entity!")
-	return end
-	if bleed_type == 1 then
+		minetest.debug("M.I.L.A "..mila.version..": Deleted an entity!")
+		return
+	end
+
+	if mila.bleed_type == 1 then
+		minetest.debug("M.I.L.A " ..mila.version..": Realistic Blood Actived!")
 		minetest.add_particlespawner({
 			amount = 10,
 			time = 0.2,
@@ -197,7 +215,8 @@ local mila_bleed = function(self)
 			maxsize = 2,
 			texture = "mila_blood.png",
 		})
-	elseif bleed_type == 2 then
+	elseif mila.bleed_type == 2 then
+		minetest.debug("M.I.L.A " ..mila.version..": Blood Trail Actived!")
 		minetest.add_particlespawner({
 			amount = 10,
 			time = 0.2,
@@ -212,7 +231,8 @@ local mila_bleed = function(self)
 			maxsize = 2,
 			texture = "mila_blood.png",
 		})
-	elseif bleed_type == 3 then
+	elseif mila.bleed_type == 3 then
+		minetest.debug("M.I.L.A " ..mila.version..": Massive Butchery Actived!")
 		minetest.add_particlespawner({
 			amount = 170,
 			time = 0.001,
@@ -227,15 +247,15 @@ local mila_bleed = function(self)
 			maxsize = 4,
 			texture = "mila_blood.png",
 		})
-	elseif bleed_type == 4 then
-	return
+	elseif mila.bleed_type == 4 then
+		minetest.debug("M.I.L.A " ..mila.version..": Blood Splashes Disabled!")
 	end
 end
 
 --register the first function (add).
 function mila:add_entity(name,def)
 	minetest.register_entity(name, {
-		physical = def.physical,					--if false, monster will ghost trough any blocks
+		physical = def.physical or true,					--if false or nil, monster will ghost trough any blocks
 		collide_with_objects = def.collide_with_objects,	--if false, monster will ghost trough any objects
 		gravity = def.gravity or 11,
 		damage = def.damage or 1,
@@ -258,19 +278,16 @@ function mila:add_entity(name,def)
 		on_step = mila_act,						--the heart of the engine
 		--on_activate = mila_first, 					--first things we need to do
 		on_punch = mila_bleed,						--works :]
+		stepcounter = 0,
 	})
 end
 
 --register the egg function
 
-if egg == true then
-	print("M.I.L.A " ..version..": Eggs are actived!")
-else
-	print("M.I.L.A " ..version..": Eggs are not actived!")
-end
+function mila:add_egg(name,params)
+	if mila.egg == true then
+		minetest.debug("M.I.L.A " ..mila.version..": Eggs are actived!")
 
-if egg == true then
-	function mila:add_egg(name,params)
 		minetest.register_craftitem(name, {
 			description = params.description,
 			inventory_image = params.inventory_image,
@@ -278,12 +295,35 @@ if egg == true then
 			wield_scale = {x = 1, y = 1, z = 1.5},
 			on_place = function(itemstack, placer, pointed_thing)
 				if pointed_thing.type == "node" then
-					pointed_thing.under.y = pointed_thing.under.y + 2.5
-					minetest.add_entity(pointed_thing.under, name)
+					local tpos = pointed_thing.under.y + 1
+
+					local mob = minetest.add_entity(tpos, name)
+					if mob then
+						mob:setvelocity({x=0, y=-5, z=0})
+					else
+						mob.remove()
+					end
+					itemstack:take_item(1)
+					return itemstack
 				end
 			end,
 		})
+	else
+		minetest.debug("M.I.L.A " ..mila.version..": Eggs are not actived!")
 	end
+end
+
+--##SPAWNING FUNCTIONS
+function mila:add_spawn(mobname)
+	minetest.register_abm({ 
+		nodenames = {"default:dirt_with_grass"},
+		neighbors = {"air"}, 
+		interval = 5,
+		chance = 1500, 
+		action = function(pos, node, active_object_count, active_object_count_wider)
+			minetest.add_entity(pos, mobname)
+		end,
+	})
 end
 
 --set the /mila_clean command
@@ -294,7 +334,7 @@ core.register_chatcommand("mila_clean", {
 	description = "Clean the map from M.I.L.A entities!",
 	func = function(name, player)
 		clean = true
-		print("M.I.L.A " ..version..": Cleaned all M.I.L.A entities!")
+		minetest.debug("M.I.L.A " ..mila.version..": Cleaned all M.I.L.A entities!")
 		--little delay to be sure...
 		minetest.after(1.6, function()
 			clean = false -- get back to normal to make entities spawn again
@@ -304,6 +344,6 @@ core.register_chatcommand("mila_clean", {
 })
 
 --say that every little thing is gonna be allright
-print("M.I.L.A " ..version..": Everything is OK and running. Have Fun!")
-print("M.I.L.A " ..version..": Remember to report any bug on forum...")
-print("M.I.L.A " ..version..": I'm a (great) mod from azekill_DIABLO!")
+minetest.debug("M.I.L.A " ..mila.version..": Everything is OK and running. Have Fun!")
+minetest.debug("M.I.L.A " ..mila.version..": Remember to report any bug on forum...")
+minetest.debug("M.I.L.A " ..mila.version..": I'm a (great) mod from azekill_DIABLO!")

@@ -1,5 +1,5 @@
 --say that we are loading
-print("M.I.L.A " ..version..": Misc OK!")
+print("M.I.L.A " ..mila.version..": Misc OK!")
 
 --##steaks are used as default mob drops
 

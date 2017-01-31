@@ -14,8 +14,8 @@ mila.bleed_type = 1
 mila.egg = true
 mila.spawning = true
 
--- step counter for performance
-mila.globalcounter = 0.2
+-- step counter for performance and attack speed
+mila.globalcounter = 0.7
 
 
 --say that we are ready!

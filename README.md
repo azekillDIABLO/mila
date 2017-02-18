@@ -1,6 +1,3 @@
-# M.I.L.A by azekill_DIABLO 
-**M**onster **I**ntelligence : **L**ightweight **A**pi
-
 ![](https://raw.githubusercontent.com/azekillDIABLO/mila/master/screenshot.png)
 
 

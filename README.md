@@ -20,4 +20,4 @@ here are subjects to big and irregular changes. I am trying to keep this file up
 	- new models (only .b3d or .obj files)
 	
 
-**Credits to: Taikedz for code, minetest community for medias. Licensing can have problems please create issues if problem encountered***
+**Credits to: Taikedz for code, minetest community for medias. Licensing can have problems please create issues if problem encountered**

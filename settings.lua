@@ -14,8 +14,11 @@ mila.bleed_type = 1
 mila.egg = true
 mila.spawning = true
 
--- step counter for attack speed
-mila.globalcounter = 0.7
+-- step counter for attack speed (0.7 is good)
+mila.globalcounter = 0.7 --seconds
+
+-- limit number of mobs active on map (50 is good)
+mila.maxhandled = 50 --mobs
 
 --say that we are ready!
 minetest.debug("M.I.L.A " ..mila.version..": Settings file fully loaded, have fun!")

@@ -2,7 +2,7 @@
 mila = {}
 
 --define the version of the engine
-mila.version = "0.8"
+mila.version = "0.9"
 
 --set little things, for deletion
 clean = false
@@ -14,7 +14,7 @@ milapath = minetest.get_modpath("mila") --not local for other files
 --open the settings file (you can change things in it!!!)
 dofile(milapath .."/settings.lua")
 
---open the misc files, for registering items, node, abms
+--open the misc files, for registering items, node, crafts
 dofile(milapath .."/misc.lua")
 
 -- ==================
@@ -45,9 +45,193 @@ local function look_to_player(mob, player)
 	local distance = vector.distance(mobposition,playerposition)
 	mob:setvelocity({
 		x=0.01*direction.x,
-		y=0.01*direction.y - mobe.gravity, 	-- fall_speed must be negative to make 
+		y=0 - mobe.gravity, 	-- fall_speed must be negative to make 
 		z=0.01*direction.z				-- the mob fall in the right direction
 	})
+end
+
+local cid_data = {}
+minetest.after(0, function()
+	for name, def in pairs(minetest.registered_nodes) do
+		cid_data[minetest.get_content_id(name)] = {
+			name = name,
+			drops = def.drops,
+			flammable = def.groups.flammable,
+			on_blast = def.on_blast,
+		}
+	end
+end)
+
+local function calc_velocity(pos1, pos2, old_vel, power)
+	-- Avoid errors caused by a vector of zero length
+	if vector.equals(pos1, pos2) then
+		return old_vel
+	end
+
+	local vel = vector.direction(pos1, pos2)
+	vel = vector.normalize(vel)
+	vel = vector.multiply(vel, power)
+
+	-- Divide by distance
+	local dist = vector.distance(pos1, pos2)
+	dist = math.max(dist, 1)
+	vel = vector.divide(vel, dist)
+
+	-- Add old velocity
+	vel = vector.add(vel, old_vel)
+
+	-- randomize it a bit
+	vel = vector.add(vel, {
+		x = math.random() - 0.5,
+		y = math.random() - 0.5,
+		z = math.random() - 0.5,
+	})
+
+	-- Limit to terminal velocity
+	dist = vector.length(vel)
+	if dist > 250 then
+		vel = vector.divide(vel, dist / 250)
+	end
+	return vel
+end
+
+local function entity_physics(pos, radius, drops)
+	local objs = minetest.get_objects_inside_radius(pos, radius)
+	for _, obj in pairs(objs) do
+		local obj_pos = obj:getpos()
+		local dist = math.max(1, vector.distance(pos, obj_pos))
+
+		local damage = (4 / dist) * radius
+		if obj:is_player() then
+			-- currently the engine has no method to set
+			-- player velocity. See #2960
+			-- instead, we knock the player back 1.0 node, and slightly upwards
+			local dir = vector.normalize(vector.subtract(obj_pos, pos))
+			local moveoff = vector.multiply(dir, dist + 1.0)
+			local newpos = vector.add(pos, moveoff)
+			newpos = vector.add(newpos, {x = 0, y = 0.2, z = 0})
+			obj:setpos(newpos)
+
+			obj:set_hp(obj:get_hp() - damage)
+		else
+			local do_damage = true
+			local do_knockback = true
+			local entity_drops = {}
+			local luaobj = obj:get_luaentity()
+			local objdef = minetest.registered_entities[luaobj.name]
+
+			if objdef and objdef.on_blast then
+				do_damage, do_knockback, entity_drops = objdef.on_blast(luaobj, damage)
+			end
+
+			if do_knockback then
+				local obj_vel = obj:getvelocity()
+				obj:setvelocity(calc_velocity(pos, obj_pos,
+						obj_vel, radius * 10))
+			end
+			if do_damage then
+				if not obj:get_armor_groups().immortal then
+					obj:punch(obj, 1.0, {
+						full_punch_interval = 1.0,
+						damage_groups = {fleshy = damage},
+					}, nil)
+				end
+			end
+			for _, item in pairs(entity_drops) do
+				add_drop(drops, item)
+			end
+		end
+	end
+end
+
+local function add_effects(pos, radius, drops)
+	minetest.add_particle({
+		pos = pos,
+		velocity = vector.new(),
+		acceleration = vector.new(),
+		expirationtime = 0.4,
+		size = radius * 10,
+		collisiondetection = false,
+		vertical = false,
+		texture = "mila_fireball.png",
+	})
+	minetest.add_particlespawner({
+		amount = 64,
+		time = 0.5,
+		minpos = vector.subtract(pos, radius / 2),
+		maxpos = vector.add(pos, radius / 2),
+		minvel = {x = -10, y = -10, z = -10},
+		maxvel = {x = 10, y = 10, z = 10},
+		minacc = vector.new(),
+		maxacc = vector.new(),
+		minexptime = 1,
+		maxexptime = 2.5,
+		minsize = radius * 3,
+		maxsize = radius * 5,
+		texture = "mila_boom.png",
+	})
+
+	-- we just dropped some items. Look at the items entities and pick
+	-- one of them to use as texture
+	local texture = "mila_fireball.png" --fallback texture
+	local most = 0
+	for name, stack in pairs(drops) do
+		local count = stack:get_count()
+		if count > most then
+			most = count
+			local def = minetest.registered_nodes[name]
+			if def and def.tiles and def.tiles[1] then
+				texture = def.tiles[1]
+			end
+		end
+	end
+
+	minetest.add_particlespawner({
+		amount = 64,
+		time = 0.1,
+		minpos = vector.subtract(pos, radius / 2),
+		maxpos = vector.add(pos, radius / 2),
+		minvel = {x = -3, y = 0, z = -3},
+		maxvel = {x = 3, y = 5,  z = 3},
+		minacc = {x = 0, y = -10, z = 0},
+		maxacc = {x = 0, y = -10, z = 0},
+		minexptime = 0.8,
+		maxexptime = 2.0,
+		minsize = radius * 0.66,
+		maxsize = radius * 2,
+		texture = texture,
+		collisiondetection = true,
+	})
+end
+
+function mila_boom(pos, mob, power)
+	minetest.sound_play("mila_boom", {pos = pos, gain = 1.5, max_hear_distance = 2*64})
+	local drops, radius = explode(mob, power, ignore_protection, ignore_on_blast)
+	-- append entity drops
+	local damage_radius = power
+	entity_physics(pos, damage_radius, drops)
+	add_effects(pos, radius, drops)
+end
+
+-- loss probabilities array (one in X will be lost)
+local loss_prob = {}
+
+loss_prob["default:cobble"] = 3
+loss_prob["default:dirt"] = 4
+
+local function add_drop(drops, item)
+	item = ItemStack(item)
+	local name = item:get_name()
+	if loss_prob[name] ~= nil and math.random(1, loss_prob[name]) == 1 then
+		return
+	end
+
+	local drop = drops[name]
+	if drop == nil then
+		drops[name] = item
+	else
+		drop:set_count(drop:get_count() + item:get_count())
+	end
 end
 
 local function destroy(drops, npos, cid, c_air, c_fire, on_blast_queue, ignore_protection, ignore_on_blast)
@@ -73,8 +257,9 @@ local function destroy(drops, npos, cid, c_air, c_fire, on_blast_queue, ignore_p
 	end
 end
 
-local function explode(pos, radius, ignore_protection, ignore_on_blast)
-	pos = vector.round(pos)
+function explode(mob, radius, ignore_protection, ignore_on_blast)
+	local mobposition = mob:getpos()
+	pos = vector.round(mobposition)
 	-- scan for adjacent TNT nodes first, and enlarge the explosion
 	local vm1 = VoxelManip()
 	local p1 = vector.subtract(pos, 2)
@@ -362,11 +547,14 @@ local mila_act = function(self,dtime)
 			self.target:set_hp(hptarget - self.damage)
 			mobe:remove()
 			ent_num = ent_num-1
+		elseif self.target and vector.distance(mobposition, self.target:getpos()) > self.range then 
+			mobe:remove()
+			ent_num = ent_num-1
 		elseif not self.target then 
 			mobe:remove()
 			ent_num = ent_num-1
 		end
---##BOMBER CODE === BUGGED
+--##BOMBER CODE
 	elseif self.status == "bomber" then
 
 		-- check for a target
@@ -389,15 +577,50 @@ local mila_act = function(self,dtime)
 
 		if self.target and vector.distance(mobposition, self.target:getpos()) < self.range then 
 			minetest.debug("M.I.L.A " ..mila.version..": A mob is exploding!")
-			--wip explosion
-			local boompos = {x=mobposition.x,y=mobposition.y,z=mobposition.z}
-			explode(boompos, 3, self.object)--blow up
-			self.object:setvelocity({x=0,y=-self.gravity,z=0})
+			--explosion system
+			minetest.set_node(mobposition, {name="tnt:tnt_burning"})
+			local blastpower = self.damage/3
+			mila_boom(mobposition, self.object, blastpower)--blow up
 			mobe:remove()
+			ent_num = ent_num-1
 		elseif self.target then
 			move_to_player(self.object, self.target)
 		else
 			move_random(self)
+		end
+--##FIREBALL CODE
+	elseif self.status == "fireball" then
+		-- check for a target
+		if self.target and vector.distance(mobposition, self.target:getpos()) > self.range then
+			-- previously acquired target now out of range
+			self.target = nil			
+		end
+
+		if not self.target then
+		
+			local playerlist = nil
+			local moblist = nil
+			moblist, playerlist  = find_entities(self.object, self.range)
+
+			-- if players found, choose one
+			if playerlist and #playerlist > 0 then
+				self.target = playerlist[math.random(1,#playerlist)]	
+			end
+		end
+		if self.target and vector.distance(mobposition, self.target:getpos()) < 4 then 
+			minetest.debug("M.I.L.A " ..mila.version..": A fireball is hitting target!")
+			--explosion system
+			minetest.set_node(mobposition, {name="tnt:tnt_burning"})
+			local blastpower = self.damage/3
+			mila_boom(mobposition, self.object, blastpower)--blow up
+			mobe:remove()
+			ent_num = ent_num-1
+		elseif self.target and vector.distance(mobposition, self.target:getpos()) > self.range then 
+			mobe:remove()
+			ent_num = ent_num-1
+		elseif not self.target then 
+			mobe:remove()
+			ent_num = ent_num-1
 		end
 --##PASSIVE CODE
 	elseif self.status == "passive" then
@@ -419,8 +642,8 @@ local mila_first = function(self,dtime)
 	--add a counter to prevent entity overload
 	ent_num = ent_num+1
 	
-	--##ARROW CODE
-	if self.status == "arrow" then
+	--##ARROW & FIREBALL CODE
+	if self.status == "arrow" or self.status == "fireball" then
 		-- check for a target
 		if self.target and vector.distance(mobposition, self.target:getpos()) > self.range then
 			-- previously acquired target now out of range
@@ -442,6 +665,7 @@ local mila_first = function(self,dtime)
 			move_to_player(self.object, self.target)
 		else
 			mobe:remove()
+			ent_num = ent_num-1
 		end	
 	end
 end
@@ -630,6 +854,11 @@ minetest.register_chatcommand("mila_clean", {
 		end)
 	end,
 })
+
+--open the mob files, for registering the entities
+--loaded at the end to be sure every function is
+--registered and ready to be used
+dofile(milapath .."/mob.lua")
 
 --say that every little thing is gonna be allright
 minetest.debug("M.I.L.A " ..mila.version..": Everything is OK and running. Have Fun!")

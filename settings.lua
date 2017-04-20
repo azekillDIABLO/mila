@@ -10,16 +10,16 @@ minetest.debug("M.I.L.A " ..mila.version..": Settings file found, loading...")
 -- 1 for realistic blood, 2 for blood trail, 3 for the massive butchery (laggy) and 4 to disable:
 mila.bleed_type = 1
 
--- 1 for nametag with health in numbers and internal name, 2 for health bar, 3 for coloure shape and 4 to disable:
-mila.nametag = 2
+-- 1 for nametag with health in numbers and internal name, 2 for health bar, 3 for coloured shape and 4 to disable:
+mila.nametag = 1
 
 --say true to active, other words are counted as false:
 mila.egg = true --allow registering eggs
 mila.spawning = true --make all mobs spawn
-mila.break_blocks = false --break blocks on explosion
-mila.peaceful = true --make all mobs passive
+mila.break_blocks = true --break blocks on explosion
+mila.peaceful = false --make all mobs passive
 
--- step counter for attack speed (0.7 is good)
+-- step counter for attack speed (0.5 is good)
 mila.globalcounter = 0.5 --seconds
 
 -- limit number of mobs active on map (50 is good)

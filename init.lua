@@ -741,11 +741,11 @@ local mila_act = function(self,dtime)
 		if self.target and vector.distance(mobposition, self.target:getpos()) < self.range then 
 			minetest.debug("M.I.L.A " ..mila.version..": A mob is exploding!")
 			--explosion system, now really working :)
-			if mila.break_block == true then
+			if mila.break_blocks == true then
 				minetest.set_node(mobposition, {name="tnt:tnt_burning"})
 				local blastpower = self.damage/3
 				mila_boom(mobposition, self.object, blastpower)--blow up (we still have some TNT projections)
-			else
+			elseif mila.break_blocks == false then
 				local hptarget = self.target:get_hp()
 				simulate_tnt(self.object, self.target)
 				self.target:set_hp(hptarget - self.damage)
@@ -779,12 +779,12 @@ local mila_act = function(self,dtime)
 		end
 		if self.target and vector.distance(mobposition, self.target:getpos()) < 4 then 
 			minetest.debug("M.I.L.A " ..mila.version..": A fireball is hitting target!")
-			if mila.break_block == true then
+			if mila.break_blocks == true then
 				--explosion system, now really working :)
 				minetest.set_node(mobposition, {name="tnt:tnt_burning"})
 				local blastpower = self.damage/3
 				mila_boom(mobposition, self.object, blastpower)--blow up (we still have some TNT projections)
-			else
+			elseif mila.break_blocks == false then
 				local hptarget = self.target:get_hp()
 				simulate_tnt(self.object, self.target)
 				self.target:set_hp(hptarget - self.damage)

@@ -6,7 +6,9 @@ mila:add_entity("mila:evil_knight", {
 	status = "hostile",
 	visual_size = {x=5, y=5},
 	mesh = "armour.b3d",
+	drops = "default:steel_ingot 8",
 	textures = {"armour.png"},
+	sounds = "mila_growl",
 	makes_footstep_sound = true,
 	physical = true,		
 	collide_with_objects = true,
@@ -43,6 +45,7 @@ mila:add_entity("mila:bat", { -- define and access functions on Lua tables using
 	gravity = 0,
 	mesh = "bat.b3d",
 	textures = {"bat.png"},
+	drops = "mila:fang",
 	makes_footstep_sound = false,
 	physical = true,		
 	collide_with_objects = true,
@@ -64,6 +67,39 @@ mila:add_egg("mila:bat", {
 mila:add_spawn("mila:bat", {
 	nodenames = {"air"},
 	neighbors = {"default:stone"},
+	interval = 240,
+	chance = 1000,
+})
+
+--No, it's a Sheep!
+
+mila:add_entity("mila:sheep", { 
+	collisionbox = {-0.3,-1,-0.3, 0.3,0.2,0.3},
+	status = "passive",
+	mesh = "mila_sheep.b3d",
+	sounds = "mila_sheep",
+	textures = {"mila_sheep.png^mila_sheep_wool.png"},
+	makes_footstep_sound = true,
+	physical = true,		
+	collide_with_objects = true,
+	automatic_face_movement_dir = -90,
+	hp_max = 14,
+	speed = 2, 	
+	stepheight = 2,
+	view_range = 5,	
+})
+   
+--then the egg
+
+mila:add_egg("mila:sheep", {
+	description = "Sheep",
+	inventory_image = "default_grass.png",
+	wield_image = "default_grass.png",
+})
+
+mila:add_spawn("mila:sheep", {
+	nodenames = {"air"},
+	neighbors = {"default:dirt_with_grass"},
 	interval = 240,
 	chance = 1000,
 })
@@ -107,7 +143,7 @@ mila:add_entity("mila:arrow", {
 --then the egg
 
 mila:add_egg("mila:skeleton", {
-	description = "Minecraft skeleton",
+	description = "Skeleton",
 	inventory_image = "skeleton.png",
 	wield_image = "skeleton.png",
 })
@@ -119,9 +155,12 @@ mila:add_entity("mila:bomba", {
 	collisionbox = {-0.4,-0.7,-0.4, 0.4, 0.6, 0.4},
 	status = "bomber",
 	visual_size = {x=1, y=1},
-	mesh = "armour.b3d",
-	textures = {"armour.png"},
+	visual = "cube",
+	textures = {"tnt_top.png","tnt_bottom.png",
+			"tnt_side.png","tnt_side.png",
+			"tnt_side.png","tnt_side.png"},
 	makes_footstep_sound = true,
+	drops = "tnt:tnt",
 	physical = true,		
 	collide_with_objects = true,
 	stepheight = 2,
@@ -148,6 +187,7 @@ mila:add_entity("mila:DM", {
 	visual = "mesh",
 	mesh = "DM.b3d",
 	textures = {"DM.png"},
+	drops = "default:mese_crystal 8",
 	makes_footstep_sound = true,
 	physical = true,		
 	collide_with_objects = true,
@@ -161,7 +201,7 @@ mila:add_entity("mila:DM", {
 
 mila:add_entity("mila:fireball", {
 	damage = 6,
-	gravity = 0,
+	gravity = 1,
 	collisionbox = {-0.3,-0.3,-0.3, 0.3,0.3,0.3},
 	status = "fireball",
 	visual_size = {x=1, y=1},
@@ -169,9 +209,10 @@ mila:add_entity("mila:fireball", {
 	textures = {"default_lava.png","default_lava.png",
 			"default_lava.png","default_lava.png",
 			"default_lava.png","default_lava.png"},
+	drops = "default:mese_crystal_fragment 4",
 	makes_footstep_sound = false,
-	physical = true,		
-	collide_with_objects = false,
+	physical = false,		
+	collide_with_objects = true,
 	hp_max = 5,
 	speed = 8,
 	range = 20,
@@ -194,6 +235,7 @@ mila:add_entity("mila:steve_minecraft", { -- define and access functions on Lua 
 	visual_size = {x=1, y=1},
 	mesh = "character.b3d",
 	textures = {"character.png"},
+	drops = "default:wood_sword",
 	makes_footstep_sound = true,
 	physical = true,		
 	collide_with_objects = true,

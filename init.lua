@@ -2,14 +2,14 @@
 mila = {}
 
 --define the version of the engine
-mila.version = "0.9"
+mila.version = "1.0"
 
 --set little things, for deletion
 clean = false
 ent_num = 0
 
---define modpath
-milapath = minetest.get_modpath("mila") --not local for other files
+--define modpath, not local for other files
+milapath = minetest.get_modpath("mila") 
 
 --open the settings file (you can change things in it!!!)
 dofile(milapath .."/settings.lua")
@@ -19,36 +19,6 @@ dofile(milapath .."/misc.lua")
 
 -- ==================
 -- General functions:
-
-local function move_to_player(mob, player)
-	local mobposition = mob:getpos()
-	local mobe = mob:get_luaentity()
-	local playerposition = player:getpos()
-
-	local direction = vector.direction(mobposition,playerposition)
-	local distance = vector.distance(mobposition,playerposition)
-	if distance > 1.5 then
-		mob:setvelocity({
-			x=mobe.speed*direction.x,
-			y=mobe.speed*direction.y - mobe.gravity, 	-- fall_speed must be negative to make 
-			z=mobe.speed*direction.z			-- the mob fall in the right direction
-		})
-	end
-end
-
-local function look_to_player(mob, player)
-	local mobposition = mob:getpos()
-	local mobe = mob:get_luaentity()
-	local playerposition = player:getpos()
-
-	local direction = vector.direction(mobposition,playerposition)
-	local distance = vector.distance(mobposition,playerposition)
-	mob:setvelocity({
-		x=0.01*direction.x,
-		y=0 - mobe.gravity, 	-- fall_speed must be negative to make 
-		z=0.01*direction.z				-- the mob fall in the right direction
-	})
-end
 
 local cid_data = {}
 minetest.after(0, function()
@@ -204,13 +174,55 @@ local function add_effects(pos, radius, drops)
 	})
 end
 
+local function rand_pos(center, pos, radius)
+	local def
+	local reg_nodes = minetest.registered_nodes
+	local i = 0
+	repeat
+		-- Give up and use the center if this takes too long
+		if i > 4 then
+			pos.x, pos.z = center.x, center.z
+			break
+		end
+		pos.x = center.x + math.random(-radius, radius)
+		pos.z = center.z + math.random(-radius, radius)
+		def = reg_nodes[minetest.get_node(pos).name]
+		i = i + 1
+	until def and not def.walkable
+end
+
+local function eject_drops(drops, pos, radius)
+	local drop_pos = vector.new(pos)
+	for _, item in pairs(drops) do
+		local count = math.min(item:get_count(), item:get_stack_max())
+		while count > 0 do
+			local take = math.max(1,math.min(radius * radius,
+					count,
+					item:get_stack_max()))
+			rand_pos(pos, drop_pos, radius)
+			local dropitem = ItemStack(item)
+			dropitem:set_count(take)
+			local obj = minetest.add_item(drop_pos, dropitem)
+			if obj then
+				obj:get_luaentity().collect = true
+				obj:setacceleration({x = 0, y = -10, z = 0})
+				obj:setvelocity({x = math.random(-3, 3),
+						y = math.random(0, 10),
+						z = math.random(-3, 3)})
+			end
+			count = count - take
+		end
+	end
+end
+
 function mila_boom(pos, mob, power)
 	minetest.sound_play("mila_boom", {pos = pos, gain = 1.5, max_hear_distance = 2*64})
 	local drops, radius = explode(mob, power, ignore_protection, ignore_on_blast)
 	-- append entity drops
 	local damage_radius = power
 	entity_physics(pos, damage_radius, drops)
-	add_effects(pos, radius, drops)
+	eject_drops(drops, pos, radius)
+	add_effects(pos, power, drops)
 end
 
 -- loss probabilities array (one in X will be lost)
@@ -358,6 +370,44 @@ function explode(mob, radius, ignore_protection, ignore_on_blast)
 	return drops, radius
 end
 
+----------------------------------------------------------
+
+local function simulate_tnt(mob, player)
+	local mobposition = mob:getpos()
+	local mobe = mob:get_luaentity()
+	local playerposition = player:getpos()	
+	local direction = vector.direction(mobposition,playerposition)
+	local distance = vector.distance(mobposition,playerposition)
+	
+	if distance > 1.5 then		
+		minetest.add_particle({
+			pos = mobposition,
+			velocity = {x = 0, y = 0, z = 0},
+			acceleration = {x = 0, y = 0, z = 0},
+			expirationtime = 2,
+			size = 30,
+			collisiondetection = false,
+			vertical = false,
+			texture = "mila_fireball.png",
+		})
+		minetest.add_particlespawner({
+			amount = 64,
+			time = 0.5,
+			minpos = {x = mobposition.x-1, y = mobposition.y-1, z = mobposition.z-1},
+			maxpos = {x = mobposition.x+1, y = mobposition.y+1, z = mobposition.z+1},
+			minvel = {x = -10, y = -10, z = -10},
+			maxvel = {x = 10, y = 10, z = 10},
+			minacc = {x = -10, y = -10, z = -10},
+			maxacc = {x = 10, y = -10, z = 10},
+			minexptime = 1,
+			maxexptime = 2.5,
+			minsize = 5,
+			maxsize = 8,
+			texture = "mila_boom.png",
+		})
+	end
+end
+
 local function find_entities(mob, range)
 		--find entities
 		local pos = mob:getpos()
@@ -381,49 +431,114 @@ local function find_entities(mob, range)
 		return moblist, playerlist
 end
 
+local function move_to_player(mob, player)
+	local mobposition = mob:getpos()
+	local mobe = mob:get_luaentity()
+	local playerposition = player:getpos()	
+	local node = minetest.get_node(mobposition)
+	local direction = vector.direction(mobposition,playerposition)
+	local distance = vector.distance(mobposition,playerposition)
+	
+	if distance > 1.5 then
+		if node.name == "default:water_source" or node.name == "default:river_water_source" or node.name == "default:water_flowing" or node.name == "default:river_water_flowing" then
+			mob:setvelocity({
+				x=mobe.speed*0.7*direction.x,
+				y=mobe.speed*0.7*direction.y+2, 	-- the mob floats but swim towards you, even if slowed
+				z=mobe.speed*0.7*direction.z			
+			})
+		else
+			mob:setvelocity({
+				x=mobe.speed*direction.x,
+				y=mobe.speed*direction.y - mobe.gravity, 	-- fall_speed must be negative to make 
+				z=mobe.speed*direction.z			-- the mob fall in the right direction
+			})
+		end
+	end
+end
+
+local function look_to_player(mob, player)
+	local mobposition = mob:getpos()
+	local mobe = mob:get_luaentity()
+	local playerposition = player:getpos()
+	local node = minetest.get_node(mobposition)
+
+	local direction = vector.direction(mobposition,playerposition)
+	local distance = vector.distance(mobposition,playerposition)
+	if node.name == "default:water_source" or node.name == "default:river_water_source" or node.name == "default:water_flowing" or node.name == "default:river_water_flowing" then
+		mob:setvelocity({
+			x=0.01*direction.x,
+			y=2, 	-- the mob floats but swim towards you, even if slowed
+			z=0.01*direction.z			
+		})
+	else
+		mob:setvelocity({
+			x=0.01*direction.x,
+			y=-mobe.gravity, 	-- fall_speed must be negative to make 
+			z=0.01*direction.z			-- the mob fall in the right direction
+		})
+	end
+end
+
+
 local function move_random(self)
 	local random = math.random(1, 20)
 	local vel = self.object:getvelocity()
-	if not self.gravity == 0 then
+	local mob = self.object
+	local pos = mob:getpos()	
+	local node = minetest.get_node(pos)
+	
+	--hackiest way ever to know if in water
+	if node.name == "default:water_source" or node.name == "default:river_water_source" or node.name == "default:water_flowing" or node.name == "default:river_water_flowing" then
+		--move randomly (swimming)
 		if random < 5 then -- set a new course
 			self.object:setvelocity({
 				x=math.random(-self.speed, self.speed),
-				y=-self.gravity,
+				y=math.random(1, self.speed),
 				z=math.random(-self.speed, self.speed)
 			})
 		elseif random < 10 then -- slow down
 			self.object:setvelocity({
-				x = vel.x*0.8,
-				y = vel.y,
-				z = vel.z*0.8,
+				x = vel.x/3,
+				y = 1,
+				z = vel.z/3,
 			})
 		else
 			self.object:setvelocity({
 				x = vel.x,
-				y = -self.gravity,
+				y = 1,
 				z = vel.z,
 			})
 		end
-	elseif self.gravity == 0 then
+	else
+		--move randomly and fall
 		if random < 5 then -- set a new course
 			self.object:setvelocity({
 				x=math.random(-self.speed, self.speed),
-				y=math.random(-self.speed, self.speed),
+				y=math.random(-self.speed, self.speed)-self.gravity,
 				z=math.random(-self.speed, self.speed)
 			})
 		elseif random < 10 then -- slow down
 			self.object:setvelocity({
-				x = vel.x*0.8,
-				y = vel.y*0.8,
-				z = vel.z*0.8,
+				x = vel.x/3,
+				y = vel.y/3-self.gravity,
+				z = vel.z/3,
 			})
 		else
 			self.object:setvelocity({
 				x = vel.x,
-				y = vel.y,
+				y = vel.y-self.gravity,
 				z = vel.z,
 			})
 		end
+	end
+end
+
+local function do_sounds_random(self)
+	local random = math.random(1, 20)
+	local mob = self.object
+	local pos = mob:getpos()
+	if random < 3 then -- play sounds for mob
+		minetest.sound_play(self.sounds, {pos = pos, gain = 1.8, max_hear_distance = 30})	
 	end
 end
 
@@ -444,24 +559,72 @@ local mila_act = function(self,dtime)
 	local mobname = self.name
 	local hp = mobe:get_hp()
 	local L_hp = hp/self.hp_max*205 --I seriousely love maths
+	local hpi = self.hp_max/5
 	
-	--add health bar
-	mobe:set_nametag_attributes({
-		color = {a=205, r=95, g=L_hp, b=5}, --goes from a greenish color to dark red
-		text = "[" .. mobname .."] ".. hp .."/".. self.hp_max,
-	})
+	if mila.nametag == 1 then --add health in coloured numbers and mob name
+		mobe:set_nametag_attributes({
+			color = {a=255, r=95, g=L_hp, b=5}, --goes from a greenish color to dark red
+			text = "[" .. mobname .."] ".. hp .."/".. self.hp_max,
+		})
+	elseif mila.nametag == 2 then --add coloured health bar 
+		if hp == self.hp_max then
+			mobe:set_nametag_attributes({ --green
+				color = {a=255, r=25, g=255, b=5}, 
+				text = "_____",
+			})
+		elseif hp > hpi*4 then
+			mobe:set_nametag_attributes({ --dark green
+				color = {a=255, r=75, g=185, b=5}, 
+				text = "____",
+			})
+		elseif hp > hpi*3 then
+			mobe:set_nametag_attributes({ --yellow
+				color = {a=255, r=115, g=115, b=5}, 
+				text = "___",
+			})
+		elseif hp > hpi*2 then
+			mobe:set_nametag_attributes({ --orange
+				color = {a=255, r=185, g=75, b=5}, 
+				text = "__",
+			})
+		elseif hp > hpi*1 then
+			mobe:set_nametag_attributes({ --red
+				color = {a=255, r=255, g=25, b=5}, 
+				text = "_",
+			})
+		end
+	elseif mila.nametag == 3 then --add colored shape
+		mobe:set_nametag_attributes({
+			color = {a=255, r=95, g=L_hp, b=5}, --goes from a greenish color to dark red
+			text = "#",
+		}) 
+	elseif mila.nametag == 4 then --disable nametag
+		mobe:set_nametag_attributes({
+			color = {a=0, r=0, g=0, b=0}, 
+			text = "",
+		})
+	end
 	
 	--delete with /mila_clean command
 	if clean == true then
 		mobe:set_hp(0)
 		mobe:remove()
 		ent_num = ent_num-1
-		--set_hp to 0, then force death.
+		--set_hp to 0, then force death; just to be sure.
 	end
-
+	
+	--play a random sound
+	do_sounds_random(self)
+	
+--##MAKE MOB PASSIVE IF PEACEFUL IS ACTIVED
+	if mila.peaceful == true then
+		if self.status == "hostile" or self.status == "shooter" then
+			mobe:remove()
+		end
+	end
+	
 --##HOSTILE CODE
 	if self.status == "hostile" then
-
 		-- check for a target
 		if self.target and vector.distance(mobposition, self.target:getpos()) > self.range then
 			-- previously acquired target now out of range
@@ -577,10 +740,17 @@ local mila_act = function(self,dtime)
 
 		if self.target and vector.distance(mobposition, self.target:getpos()) < self.range then 
 			minetest.debug("M.I.L.A " ..mila.version..": A mob is exploding!")
-			--explosion system
-			minetest.set_node(mobposition, {name="tnt:tnt_burning"})
-			local blastpower = self.damage/3
-			mila_boom(mobposition, self.object, blastpower)--blow up
+			--explosion system, now really working :)
+			if mila.break_block == true then
+				minetest.set_node(mobposition, {name="tnt:tnt_burning"})
+				local blastpower = self.damage/3
+				mila_boom(mobposition, self.object, blastpower)--blow up (we still have some TNT projections)
+			else
+				local hptarget = self.target:get_hp()
+				simulate_tnt(self.object, self.target)
+				self.target:set_hp(hptarget - self.damage)
+				minetest.sound_play("mila_boom", {pos = pos, gain = 1.5, max_hear_distance = 2*64})
+			end
 			mobe:remove()
 			ent_num = ent_num-1
 		elseif self.target then
@@ -609,10 +779,17 @@ local mila_act = function(self,dtime)
 		end
 		if self.target and vector.distance(mobposition, self.target:getpos()) < 4 then 
 			minetest.debug("M.I.L.A " ..mila.version..": A fireball is hitting target!")
-			--explosion system
-			minetest.set_node(mobposition, {name="tnt:tnt_burning"})
-			local blastpower = self.damage/3
-			mila_boom(mobposition, self.object, blastpower)--blow up
+			if mila.break_block == true then
+				--explosion system, now really working :)
+				minetest.set_node(mobposition, {name="tnt:tnt_burning"})
+				local blastpower = self.damage/3
+				mila_boom(mobposition, self.object, blastpower)--blow up (we still have some TNT projections)
+			else
+				local hptarget = self.target:get_hp()
+				simulate_tnt(self.object, self.target)
+				self.target:set_hp(hptarget - self.damage)
+				minetest.sound_play("mila_boom", {pos = pos, gain = 1.5, max_hear_distance = 2*64})
+			end
 			mobe:remove()
 			ent_num = ent_num-1
 		elseif self.target and vector.distance(mobposition, self.target:getpos()) > self.range then 
@@ -625,13 +802,36 @@ local mila_act = function(self,dtime)
 --##PASSIVE CODE
 	elseif self.status == "passive" then
 		move_random(self)
-
 --##RE CODE (Rotating Entity)
 	elseif self.status == "re" then
 		local look_at = mobe:getyaw()
-		self.object:setyaw(look_at+0.05)				 -- it's does like the item code :D
-		self.object:setvelocity({x=0,y=-self.gravity,z=0}) 	 -- it remains very useful for doing tests, powerups or objects on a pedestal.
+		self.object:setyaw(look_at+0.5)	 -- it is very useful for doing tests, powerups or objects on a pedestal.		 
+		self.object:setvelocity({x=0,y=-self.gravity,z=0}) 
 	end
+end
+
+--debug info
+
+if mila.nametag == 1 then --add health in coloured numbers and mob name
+	minetest.debug("M.I.L.A " ..mila.version..": Nametag with mob name and health in numbers actived!")
+elseif mila.nametag == 2 then --add coloured health bar 
+	minetest.debug("M.I.L.A " ..mila.version..": Nametag with coloured healthbar activated!")
+elseif mila.nametag == 3 then --add colored shape
+	minetest.debug("M.I.L.A " ..mila.version..": Nametag with color indicator activated!")
+elseif mila.nametag == 4 then --disable nametag
+	minetest.debug("M.I.L.A " ..mila.version..": Nametag disabled!")
+end
+
+if mila.break_blocks == false then 
+	minetest.debug("M.I.L.A " ..mila.version..": Mob explosions can't destroy blocks!")
+elseif mila.break_blocks == true then 
+	minetest.debug("M.I.L.A " ..mila.version..": Mob explosions can destroy blocks!")
+end
+
+if mila.peaceful == true then
+	minetest.debug("M.I.L.A " ..mila.version..": Only peaceful mobs can spawn!")
+elseif mila.peaceful == false then
+	minetest.debug("M.I.L.A " ..mila.version..": All type of mobs can spawn!")
 end
 
 --first things we need to do with the entity
@@ -673,19 +873,22 @@ end
 --bleed and other on punch
 
 if bleed_type == 1 then
-	minetest.debug("M.I.L.A " ..version..": Realistic Blood Actived!")
+	minetest.debug("M.I.L.A " ..mila.version..": Realistic Blood Actived!")
 elseif bleed_type == 2 then
-	minetest.debug("M.I.L.A " ..version..": Blood Trail Actived!")
+	minetest.debug("M.I.L.A " ..mila.version..": Blood Trail Actived!")
 elseif bleed_type == 3 then
-	minetest.debug("M.I.L.A " ..version..": Massive Butchery Actived!")
+	minetest.debug("M.I.L.A " ..mila.version..": Massive Butchery Actived!")
 elseif bleed_type == 4 then
-	minetest.debug("M.I.L.A " ..version..": Blood Splashes Disabled!")
+	minetest.debug("M.I.L.A " ..mila.version..": Blood Splashes Disabled!")
 end
 
 local mila_bleed = function(self)
 	local mobe = self.object
 	local mobposition = mobe:getpos()
 	local hp = mobe:get_hp()
+	
+	minetest.sound_play("mila_hit", {pos = pos, gain = 4, max_hear_distance = 25})
+	
 	--remove if dead (engine handling help, for odd health amount, and set_hp() function) also add some death effect
 	if hp < 1 then
 		minetest.add_particlespawner({
@@ -694,8 +897,10 @@ local mila_bleed = function(self)
 			minpos = {x = mobposition.x-0.5, y = mobposition.y-0.5, z = mobposition.z-0.5},
 			maxpos = {x = mobposition.x+0.5, y = mobposition.y+0.5, z = mobposition.z+0.5},
 			collisiondetection = false,
-			minvel = {x = -0.5, y = -0.6, z = -0.5},
-			maxvel = {x = 0.5,  y = 0.6,  z = 0.5},
+			minvel = {x = -0.5, y = -0.5, z = -0.5},
+			maxvel = {x = 0.5,  y = 0.5,  z = 0.5},
+			minacc = {x = 0, y = 1, z = 0},
+			maxacc = {x = 0, y = 1, z = 0},
 			minexptime = 1,
 			maxexptime = 4,
 			minsize = 3,
@@ -744,11 +949,13 @@ local mila_bleed = function(self)
 		minetest.add_particlespawner({
 			amount = 170,
 			time = 0.001,
-			minpos = {x = mobposition.x-0.5, y = mobposition.y-0.5, z = mobposition.z-0.5},
-			maxpos = {x = mobposition.x+0.5, y = mobposition.y+1.5, z = mobposition.z+0.5},
-			collisiondetection = true,
-			minvel = {x = -2, y = -2, z = -2},
-			maxvel = {x = 2,  y = -1,  z = 2},
+			minpos = {x = mobposition.x, y = mobposition.y, z = mobposition.z},
+			maxpos = {x = mobposition.x, y = mobposition.y, z = mobposition.z},
+			collisiondetection = false,
+			minvel = {x = -4, y = -4, z = -4},
+			maxvel = {x = 4,  y = 4,  z = 4},
+			minacc = {x = 0, y = -10, z = 0},
+			maxacc = {x = 0, y = -10, z = 0},
 			minexptime = 1,
 			maxexptime = 1,
 			minsize = 3,
@@ -764,7 +971,7 @@ function mila:add_entity(name,def)
 	minetest.register_entity(name, {
 		physical = def.physical or true,					--if false or nil, monster will ghost trough any blocks
 		collide_with_objects = def.collide_with_objects,	--if false, monster will ghost trough any objects
-		gravity = def.gravity or 11,
+		gravity = def.gravity or 2,
 		damage = def.damage or 1,
 		range = def.range or 1,
 		mesh = def.mesh,
@@ -780,6 +987,7 @@ function mila:add_entity(name,def)
 		automatic_face_movement_dir = def.automatic_face_movement_dir or -90,	--replaces rotate (^what a stupid name)
 		hp_max = def.hp_max or 1,
 		drops = def.drops or "mila:steak 4",
+		sounds = def.sounds,					--sounds played randomly
 		arrow = def.arrow,					--arrow for shooter mobs
 		speed = def.speed or 4,				--'2' is very slow and '8' is fast (maybe ;P)
 		view_range = def.view_range or 5,		--put to '0' to make a blind mob.
@@ -792,9 +1000,14 @@ end
 
 --register the egg function
 
+if mila.egg == true then
+	minetest.debug("M.I.L.A " ..mila.version..": Eggs are actived!")
+elseif mila.egg == false then
+	minetest.debug("M.I.L.A " ..mila.version..": Eggs are not actived!")
+end
+
 function mila:add_egg(name,params)
 	if mila.egg == true then
-		minetest.debug("M.I.L.A " ..mila.version..": Eggs are actived!")
 		minetest.register_craftitem(name, {
 			description = params.description,
 			inventory_image = params.inventory_image,
@@ -811,29 +1024,32 @@ function mila:add_egg(name,params)
 				return itemstack
 			end,
 		})
-	else
-		minetest.debug("M.I.L.A " ..mila.version..": Eggs are not actived!")
 	end
 end
 
 --register spawning functions
 
+if mila.spawning == true then
+	minetest.debug("M.I.L.A " ..mila.version..": Spawning is actived!")
+elseif mila.spawning == false then
+	minetest.debug("M.I.L.A " ..mila.version..": Spawning is not actived!")
+end
+
 function mila:add_spawn(mobname, params)
 	if mila.spawning == true then
-	minetest.debug("M.I.L.A " ..mila.version..": Spawning is actived!")
-	minetest.register_abm({ 
-		nodenames = params.nodenames or {"default:dirt_with_grass"},
-		neighbors = params.neighbors or {"air"},
-		interval = params.interval or 300,
-		chance = params.chance or 1000, 
-		action = function(pos, node, active_object_count, active_object_count_wider)
-			--prevent lag by stopping entity spawn if reached a certain number
-			if ent_num < mila.maxhandled then
-				minetest.add_entity(pos, mobname)
-				minetest.debug("M.I.L.A " ..mila.version..": a " ..mobname.. " is spawning!")
-			end
-		end,
-	})
+		minetest.register_abm({ 
+			nodenames = params.nodenames or {"default:dirt_with_grass"},
+			neighbors = params.neighbors or {"air"},
+			interval = params.interval or 300,
+			chance = params.chance or 1000, 
+			action = function(pos, node, active_object_count, active_object_count_wider)
+				--prevent lag by stopping entity spawn if reached a certain number
+				if ent_num < mila.maxhandled then
+					minetest.add_entity(pos, mobname)
+					minetest.debug("M.I.L.A " ..mila.version..": a " ..mobname.. " is spawning!")
+				end
+			end,
+		})
 	end
 end
 
@@ -847,6 +1063,7 @@ minetest.register_chatcommand("mila_clean", {
 	func = function(name, player)
 		clean = true
 		minetest.debug("M.I.L.A " ..mila.version..": Cleaned " ..ent_num.. " M.I.L.A entities!")
+		minetest.chat_send_all("M.I.L.A " ..mila.version..": Cleaned " ..ent_num.. " M.I.L.A entities!")
 		--little delay to be sure...
 		minetest.after(1.6, function()
 			clean = false -- get back to normal to make entities spawn again
@@ -857,10 +1074,10 @@ minetest.register_chatcommand("mila_clean", {
 
 --open the mob files, for registering the entities
 --loaded at the end to be sure every function is
---registered and ready to be used
+--registered and ready to be used by this file :
 dofile(milapath .."/mob.lua")
 
---say that every little thing is gonna be allright
+--say that every little thing is gonna be allright 
 minetest.debug("M.I.L.A " ..mila.version..": Everything is OK and running. Have Fun!")
 minetest.debug("M.I.L.A " ..mila.version..": Remember to report any bug on forum...")
 minetest.debug("M.I.L.A " ..mila.version..": I'm a (great) mod from azekill_DIABLO!")

@@ -23,3 +23,20 @@ minetest.register_craft({
 	output = "mila:cooked_steak",
 	recipe = "mila:steak",
 })
+
+--the FANG weapon
+minetest.register_tool("mila:fang", {
+	description = "Fang",
+	wield_image = "mila_fang.png",
+	inventory_image = "mila_fang.png",
+	tool_capabilities = {
+		full_punch_interval = 0.1,
+		max_drop_level=0,
+		groupcaps={
+			cracky = {times={[3]=1.60}, uses=10, maxlevel=1},
+		},
+		damage_groups = {fleshy=3},
+	},
+	groups = {flammable = 2},
+	sound = {breaks = "default_tool_breaks"},
+})

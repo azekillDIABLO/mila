@@ -148,7 +148,14 @@ mila:add_egg("mila:skeleton", {
 	wield_image = "skeleton.png",
 })
 
--- Bomba! == bomber tes
+mila:add_spawn("mila:skeleton", {
+	nodenames = {"air"},
+	neighbors = {"default:silver_sand"},
+	interval = 300,
+	chance = 1000,
+})
+
+-- Bomba!
 
 mila:add_entity("mila:bomba", { 
 	damage = 9,
@@ -173,9 +180,16 @@ mila:add_entity("mila:bomba", {
 --then the egg
 
 mila:add_egg("mila:bomba", {
-	description = "BOMBA!",
-	inventory_image = "default_dirt.png",
-	wield_image = "default_dirt.png",
+	description = "Running TnT block",
+	inventory_image = "tnt_side.png",
+	wield_image = "tnt_side.png",
+})
+
+mila:add_spawn("mila:bomba", {
+	nodenames = {"air"},
+	neighbors = {"default:dirt_with_grass"},
+	interval = 400,
+	chance = 5000,
 })
 
 --Dungeon master
@@ -226,6 +240,13 @@ mila:add_egg("mila:DM", {
 	wield_image = "DM.png",
 })
 
+mila:add_spawn("mila:DM", {
+	nodenames = {"air"},
+	neighbors = {"default:stone, default:mossycobble"},
+	interval = 340,
+	chance = 2000,
+})
+
 --Minecraft steve == Melee test
 
 mila:add_entity("mila:steve_minecraft", { -- define and access functions on Lua tables using the ":" operator
@@ -257,6 +278,6 @@ mila:add_egg("mila:steve_minecraft", {
 mila:add_spawn("mila:steve_minecraft", {
 	nodenames = {"default:dirt_with_grass"},
 	neighbors = {"air"},
-	interval = 440,
+	interval = 400,
 	chance = 1200,
 })

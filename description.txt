@@ -11,15 +11,7 @@ This is an API, so check the other files (api_help.lua, settings.lua) to start m
 The modpage also links to "compoments" that really adds mobs. (most of the informations
 here are subjects to big and irregular changes. I am trying to keep this file up-to-date)
 						*azekill_DIABLO*
-
-#COMING SOON :
-	- spawners
-	- more mobs (W.I.P)
-	- ranged entities
-	- swimming entities
-	- new models (only .b3d or .obj files)
 	
-
 Credits to: Taikedz for code, minetest community for medias. Licensing can have problems please create issues if problem encountered
 
 #TAGS: 

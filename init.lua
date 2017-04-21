@@ -443,13 +443,13 @@ local function move_to_player(mob, player)
 		if node.name == "default:water_source" or node.name == "default:river_water_source" or node.name == "default:water_flowing" or node.name == "default:river_water_flowing" then
 			mob:setvelocity({
 				x=mobe.speed*0.7*direction.x,
-				y=mobe.speed*0.7*direction.y+2, 	-- the mob floats but swim towards you, even if slowed
+				y=mobe.speed*0.7*direction.y+1, 	-- the mob floats but swim towards you, even if slowed
 				z=mobe.speed*0.7*direction.z			
 			})
 		else
 			mob:setvelocity({
 				x=mobe.speed*direction.x,
-				y=mobe.speed*direction.y - mobe.gravity, 	-- fall_speed must be negative to make 
+				y=-mobe.gravity, 	-- fall_speed must be negative to make 
 				z=mobe.speed*direction.z			-- the mob fall in the right direction
 			})
 		end
@@ -613,13 +613,23 @@ local mila_act = function(self,dtime)
 		--set_hp to 0, then force death; just to be sure.
 	end
 	
+	--prevent mob overhaul
+	if ent_num > mila.maxhandled*1.7 then
+		mobe:set_hp(0)
+		mobe:remove()
+		ent_num = ent_num-1
+		--set_hp to 0, then force death; just to be sure.
+	end
+	
 	--play a random sound
 	do_sounds_random(self)
 	
 --##MAKE MOB PASSIVE IF PEACEFUL IS ACTIVED
 	if mila.peaceful == true then
 		if self.status == "hostile" or self.status == "shooter" then
+			mobe:set_hp(0)
 			mobe:remove()
+			ent_num = ent_num-1
 		end
 	end
 	

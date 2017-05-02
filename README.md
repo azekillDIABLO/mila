@@ -3,6 +3,7 @@
 
 ![](https://raw.githubusercontent.com/azekillDIABLO/mila/master/screenshot.png)
 
+<a href="http://www.reliablecounter.com" target="_blank"><img src="http://www.reliablecounter.com/count.php?page=forum.minetest.net/viewtopic.php?f=9t=15375&digit=style/plain/13/&reloads=0" alt="www.reliablecounter.com" title="www.reliablecounter.com" border="0"></a><br /><a href="http://www.analogmix.com" target="_blank" style="font-family: Geneva, Arial; font-size: 9px; color: #330010; text-decoration: none;"></a>
 
 #**WHAT:**
 *"A mod which aims to run faster than other API, to give a nice experience 

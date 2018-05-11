@@ -2,7 +2,7 @@
 mila = {}
 
 --define the version of the engine
-mila.version = 1.2
+mila.version = 1.3
 
 --set little things, for deletion and else
 clean = false

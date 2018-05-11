@@ -1,30 +1,38 @@
+--[[ misc.lua
+Why is this file here?
+You don't know? IDK either
+#### Subject to removal ####
+> will be moved to template.lua
+]]
+
+
 --say that we are loading
 print("M.I.L.A " ..mila.version..": Misc OK!")
 
 --##steaks are used as default mob drops
 
---raw steak, <poisonous>
+--raw steak, <poisonous> #### Subject to removal ####
 minetest.register_craftitem("mila:steak", {
 	description = "Raw steak",
 	inventory_image = "mila_steak.png",
 	on_use = minetest.item_eat(-4),
 })
 
---cooked steak, <healthy>
+--cooked steak, <healthy> #### Subject to removal ####
 minetest.register_craftitem("mila:cooked_steak", {
 	description = "Cooked steak",
 	inventory_image = "mila_steak_2.png",
 	on_use = minetest.item_eat(5),
 })
 
---the "cooking" method to obtain the steaks
+--the "cooking" method to obtain the steaks #### Subject to removal ####
 minetest.register_craft({
 	type = "cooking",
 	output = "mila:cooked_steak",
 	recipe = "mila:steak",
 })
 
---the FANG weapon
+--the FANG weapon #### Subject to removal ####
 minetest.register_tool("mila:fang", {
 	description = "Fang",
 	wield_image = "mila_fang.png",

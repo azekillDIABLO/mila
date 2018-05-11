@@ -1,3 +1,11 @@
+--[[ mob.lua
+Template mobs are registered here,
+feel free to use this templates for your
+own creations!
+#### Subject to removal ####
+> will be moved to template.lua
+]]
+
 --try to register the first entity
 
 mila:add_entity("mila:evil_knight", { 
@@ -109,6 +117,7 @@ mila:add_spawn("mila:sheep", {
 mila:add_entity("mila:skeleton", {
 	collisionbox = {-0.4,-0.8,-0.4, 0.4,0.6,0.4},
 	status = "shooter",
+	attack_speed = 4,
 	visual_size = {x=1, y=1},
 	visual = "mesh",
 	mesh = "skeleton.b3d",
@@ -121,22 +130,24 @@ mila:add_entity("mila:skeleton", {
 	range = 10, 	
 	stepheight = 2,
 	view_range = 15,
-	arrow = "mila:arrow",
+	arrow = "mila:missile",
 })
 
-mila:add_entity("mila:arrow", {
-	damage = 4,
+mila:add_entity("mila:missile", {
+	damage = 1,
 	gravity = 0,
 	collisionbox = {-0.2,-0.2,-0.2, 0.2,0.2,0.2},
-	status = "arrow",
+	status = "missile",
+	attack_speed = 3,
 	visual_size = {x=1, y=1},
 	visual = "upright_sprite",
 	textures = {"arrow.png"},
 	makes_footstep_sound = false,
-	physical = true,		
+	physical = false,		
 	collide_with_objects = true,
+	drops = "",
 	hp_max = 5,
-	speed = 8,
+	speed = 3,
 	range = 20,
 })
 
@@ -150,7 +161,7 @@ mila:add_egg("mila:skeleton", {
 
 mila:add_spawn("mila:skeleton", {
 	nodenames = {"air"},
-	neighbors = {"default:silver_sand"},
+	neighbors = {"default:sand"},
 	interval = 300,
 	chance = 1000,
 })
@@ -197,6 +208,7 @@ mila:add_spawn("mila:bomba", {
 mila:add_entity("mila:DM", {
 	collisionbox = {-0.6,-1,-0.6, 0.6,1,0.6},
 	status = "shooter",
+	attack_speed = 5,
 	visual_size = {x=1, y=1},
 	visual = "mesh",
 	mesh = "DM.b3d",
@@ -223,7 +235,7 @@ mila:add_entity("mila:fireball", {
 	textures = {"default_lava.png","default_lava.png",
 			"default_lava.png","default_lava.png",
 			"default_lava.png","default_lava.png"},
-	drops = "default:mese_crystal_fragment 4",
+	drops = "default:mese_crystal_fragment 1",
 	makes_footstep_sound = false,
 	physical = false,		
 	collide_with_objects = true,
@@ -242,7 +254,7 @@ mila:add_egg("mila:DM", {
 
 mila:add_spawn("mila:DM", {
 	nodenames = {"air"},
-	neighbors = {"default:stone, default:mossycobble"},
+	neighbors = {"default:stone"},
 	interval = 340,
 	chance = 2000,
 })
@@ -256,7 +268,7 @@ mila:add_entity("mila:steve_minecraft", { -- define and access functions on Lua 
 	visual_size = {x=1, y=1},
 	mesh = "character.b3d",
 	textures = {"character.png"},
-	drops = "default:wood_sword",
+	drops = "default:apple 3",
 	makes_footstep_sound = true,
 	physical = true,		
 	collide_with_objects = true,

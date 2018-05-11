@@ -430,9 +430,8 @@ local mila_act = function(self,dtime)
 			minetest.debug("M.I.L.A " ..mila.version..": A mob is exploding!")
 			--explosion system, now really working :)
 			if mila.break_blocks == true then
-				minetest.set_node(mobposition, {name="mila:tnt_burning"})
-				local blastpower = self.damage/3
-				mila.explode(mobposition, blastpower, ignore_protection, ignore_on_blast)--blow up 
+				local blastpower = self.damage*0.8
+				tnt.boom(mobposition, {radius = blastpower, damage_radius = blastpower*1.5})
 			elseif mila.break_blocks == false then
 				local hptarget = self.target:get_hp()
 				simulate_tnt(self.object, self.target)
@@ -469,10 +468,8 @@ local mila_act = function(self,dtime)
 		if self.target and vector.distance(mobposition, self.target:getpos()) < 4 then 
 			minetest.debug("M.I.L.A " ..mila.version..": A fireball is hitting target!")
 			if mila.break_blocks == true then
-				--explosion system, now really working :)
-				minetest.set_node(mobposition, {name="mila:tnt_burning"})
-				local blastpower = self.damage/3
-				mila.explode(mobposition, blastpower, ignore_protection, ignore_on_blast)--blow up 
+				local blastpower = self.damage*0.8
+				tnt.boom(mobposition, {radius = blastpower, damage_radius = blastpower*1.5})
 			elseif mila.break_blocks == false then
 				local hptarget = self.target:get_hp()
 				simulate_tnt(self.object, self.target)
@@ -517,15 +514,12 @@ local mila_act = function(self,dtime)
 			move_to_player(self.object, self.target)
 		else
 			kill_ent(self)
-	
 		end	
 		if self.target and vector.distance(mobposition, self.target:getpos()) < 4 then 
 			minetest.debug("M.I.L.A " ..mila.version..": A fireball is hitting target!")
 			if mila.break_blocks == true then
-				--explosion system, now really working :)
-				minetest.set_node(mobposition, {name="mila:tnt_burning"})
-				local blastpower = self.damage/3
-				mila.explode(mobposition, blastpower, ignore_protection, ignore_on_blast)--blow up 
+				local blastpower = self.damage*0.8
+				tnt.boom(mobposition, {radius = blastpower, damage_radius = blastpower*1.5})
 			elseif mila.break_blocks == false then
 				local hptarget = self.target:get_hp()
 				simulate_tnt(self.object, self.target)

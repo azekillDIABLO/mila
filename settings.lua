@@ -20,8 +20,7 @@ mila.template_mobs = true --(low quality mobs only used for testing, nearly unus
 mila.egg = true --allow registering eggs
 mila.spawning = true --make all mobs spawn
 mila.peaceful = false --make all mobs passive
---WIP settings
-mila.break_blocks = false --break blocks on explosion ### EXPERIMENTAL OPTION | SET TO FALSE PLEASE !!! ####
+mila.break_blocks = true --break blocks on explosion 
 
 -- global step counter for speed (0.5 is good)
 -- if self.attack_speed is lower, it won't count

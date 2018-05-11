@@ -14,24 +14,24 @@ milapath = minetest.get_modpath("mila")
 
 --open the api, the most important thing of all
 dofile(milapath .."/api.lua")
-dofile(milapath .."/boomapi.lua")
 
 
 --open the settings file (you can change things in it!!!)
 dofile(milapath .."/settings.lua")
 
---open the misc files, for registering items, node, crafts
-dofile(milapath .."/misc.lua")
 
---open the mob files, for registering the entities
---loaded at the end to be sure every function is
+--Open the template mob files, registering 
+--the entities, items and crafts. It's loaded 
+--at the end to be sure every function is
 --registered and ready to be used by this file :
 if mila.template_mobs == true then
-		dofile(milapath .."/mob.lua")
-end --## load only if actived :P
+		dofile(milapath .."/mob.lua") 	-- mobs
+		dofile(milapath .."/misc.lua") 	-- items
+end --## load only if actived :P ##
 
---REALLY STUPID DEBUG STUFF
---=============================
+-- =============================
+-- REALLY STUPID DEBUG STUFF
+-- =============================
 
 --nametag mod
 if mila.nametag == 1 then --add health in coloured numbers and mob name
@@ -90,7 +90,7 @@ elseif mila.template_mobs == false then
 	minetest.debug("M.I.L.A " ..mila.version..": Template mobs are not actived!")
 end
 
---say that every little thing is gonna be allright 
+--say that every little thing is gonna be allright
 minetest.debug("M.I.L.A " ..mila.version..": Everything is OK and running. Have Fun!")
 minetest.debug("M.I.L.A " ..mila.version..": Remember to report any bug on forum...")
 minetest.debug("M.I.L.A " ..mila.version..": I'm a (great) mod from azekill_DIABLO!")

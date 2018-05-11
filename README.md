@@ -24,5 +24,6 @@ here are subjects to big and irregular changes. I am trying to keep this file up
 	
 **~**
 Thanks to taikedz for helping me at the beggining of this mod.
-Thanks to Stix for motivating me when I needed it.
+Thanks to Stix for feedback and motivating me when I needed it.
 Thanks to Mineyoshi for being the first to create a mod using my API.
+Thanks to Lone_Wolf for finding a solution to my existential crisis. (tnt api)

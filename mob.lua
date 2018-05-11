@@ -134,7 +134,7 @@ mila:add_entity("mila:skeleton", {
 })
 
 mila:add_entity("mila:missile", {
-	damage = 1,
+	damage = 3,
 	gravity = 0,
 	collisionbox = {-0.2,-0.2,-0.2, 0.2,0.2,0.2},
 	status = "missile",
@@ -226,7 +226,7 @@ mila:add_entity("mila:DM", {
 })
 
 mila:add_entity("mila:fireball", {
-	damage = 6,
+	damage = 5,
 	gravity = 1,
 	collisionbox = {-0.3,-0.3,-0.3, 0.3,0.3,0.3},
 	status = "fireball",
